@@ -2,6 +2,7 @@ import tensorflow as tf
 from ops import conv2d, lrelu, de_conv, instance_norm, Residual, fully_connect
 from utils import save_images, save_individual_image
 import numpy as np, os
+import cv2
 
 class ExemplarGAN(object):
 
@@ -27,12 +28,12 @@ class ExemplarGAN(object):
         self.beta2 = beta2
         self.n_critic = n_critic
         self.output_size = data_ob.image_size
-        self.input_img = tf.placeholder(tf.float32, [batch_size, self.output_size, self.output_size, self.channel])
-        self.exemplar_images = tf.placeholder(tf.float32, [batch_size, self.output_size, self.output_size, self.channel])
-        self.img_mask = tf.placeholder(tf.float32, [batch_size, self.output_size, self.output_size, self.channel])
-        self.exemplar_mask =  tf.placeholder(tf.float32, [batch_size, self.output_size, self.output_size, self.channel])
-        self.domain_label = tf.placeholder(tf.int32, [batch_size])
-        self.lr_decay = tf.placeholder(tf.float32, None, name='lr_decay')
+        self.input_img = tf.compat.v1.placeholder(tf.float32, [batch_size, self.output_size, self.output_size, self.channel])
+        self.exemplar_images = tf.compat.v1.placeholder(tf.float32, [batch_size, self.output_size, self.output_size, self.channel])
+        self.img_mask = tf.compat.v1.placeholder(tf.float32, [batch_size, self.output_size, self.output_size, self.channel])
+        self.exemplar_mask =  tf.compat.v1.placeholder(tf.float32, [batch_size, self.output_size, self.output_size, self.channel])
+        self.domain_label = tf.compat.v1.placeholder(tf.int32, [batch_size])
+        self.lr_decay = tf.compat.v1.placeholder(tf.float32, None, name='lr_decay')
 
     def build_model_GAN(self):
 
@@ -69,14 +70,14 @@ class ExemplarGAN(object):
         self.log_vars.append(("D_loss", self.D_loss))
         self.log_vars.append(("G_loss", self.G_loss))
 
-        self.t_vars = tf.trainable_variables()
+        self.t_vars = tf.compat.v1.trainable_variables()
         self.d_vars = [var for var in self.t_vars if 'discriminator' in var.name]
         self.g_vars = [var for var in self.t_vars if 'encode_decode' in var.name]
 
         print("d_vars", len(self.d_vars))
         print("e_vars", len(self.g_vars))
 
-        self.saver = tf.train.Saver()
+        self.saver = tf.compat.v1.train.Saver()
         for k, v in self.log_vars:
             tf.summary.scalar(k, v)
 
@@ -86,9 +87,9 @@ class ExemplarGAN(object):
         self.local_real_img = self.input_img * self.img_mask
         self.x_tilde = self.encode_decode(self.incomplete_img, self.exemplar_images, 1 - self.img_mask, self.exemplar_mask, reuse=False)
         self.local_fake_img = self.x_tilde * self.img_mask
-        self.t_vars = tf.trainable_variables()
+        self.t_vars = tf.compat.v1.trainable_variables()
         self.g_vars = [var for var in self.t_vars if 'encode_decode' in var.name]
-        self.saver = tf.train.Saver()
+        self.saver = tf.compat.v1.train.Saver()
 
     def loss_dis(self, d_real_logits, d_fake_logits):
 
@@ -101,13 +102,12 @@ class ExemplarGAN(object):
         return tf.reduce_mean(tf.nn.softplus(-d_fake_logits))
 
     def test(self, test_step):
-        import cv2
 
         init = tf.compat.v1.global_variables_initializer()
         config = tf.compat.v1.ConfigProto()
         config.gpu_options.allow_growth = True
 
-        with tf.Session(config=config) as sess:
+        with tf.compat.v1.Session(config=config) as sess:
 
             sess.run(init)
             load_step = test_step
@@ -170,23 +170,23 @@ class ExemplarGAN(object):
     # do train
     def train(self, test_step=0):
 
-        d_trainer = tf.train.AdamOptimizer(self.learning_rate * self.lr_decay, beta1=self.beta1, beta2=self.beta2)
+        d_trainer = tf.compat.v1.train.AdamOptimizer(self.learning_rate * self.lr_decay, beta1=self.beta1, beta2=self.beta2)
         d_gradients = d_trainer.compute_gradients(self.D_loss, var_list=self.d_vars)
         opti_D = d_trainer.apply_gradients(d_gradients)
 
-        m_trainer = tf.train.AdamOptimizer(self.learning_rate * self.lr_decay, beta1=self.beta1, beta2=self.beta2)
+        m_trainer = tf.compat.v1.train.AdamOptimizer(self.learning_rate * self.lr_decay, beta1=self.beta1, beta2=self.beta2)
         m_gradients = m_trainer.compute_gradients(self.G_loss, var_list=self.g_vars)
         opti_M = m_trainer.apply_gradients(m_gradients)
 
-        init = tf.global_variables_initializer()
-        config = tf.ConfigProto()
+        init = tf.compat.v1.global_variables_initializer()
+        config = tf.compat.v1.ConfigProto()
         config.gpu_options.allow_growth = True
 
-        with tf.Session(config=config) as sess:
+        with tf.compat.v1.Session(config=config) as sess:
 
             sess.run(init)
-            summary_op = tf.summary.merge_all()
-            summary_writer = tf.summary.FileWriter(self.log_dir, sess.graph)
+            summary_op = tf.compat.v1.summary.merge_all()
+            summary_writer = tf.compat.v1.summary.FileWriter(self.log_dir, sess.graph)
             step = 0
             step2 = 0
             lr_decay = 1
@@ -245,7 +245,7 @@ class ExemplarGAN(object):
 
     def discriminate(self, x_var, x_exemplar, local_x_var, spectural_normed=False, reuse=False):
 
-        with tf.variable_scope("discriminator") as scope:
+        with tf.compat.v1.variable_scope("discriminator") as scope:
 
             if reuse == True:
                 scope.reuse_variables()
@@ -272,7 +272,7 @@ class ExemplarGAN(object):
 
     def encode_decode(self, x_var, x_exemplar, img_mask, exemplar_mask, reuse=False):
 
-        with tf.variable_scope("encode_decode") as scope:
+        with tf.compat.v1.variable_scope("encode_decode") as scope:
 
             if reuse == True:
                 scope.reuse_variables()

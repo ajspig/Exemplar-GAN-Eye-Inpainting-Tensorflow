@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.contrib.layers.python.layers import batch_norm
 import warnings
 
 def log_sum_exp(x, axis=1):
@@ -127,7 +126,7 @@ def conv_cond_concat(x, y):
     return tf.concat(3 , [x , y*tf.ones([x_shapes[0], x_shapes[1], x_shapes[2] , y_shapes[3]])])
 
 def batch_normal(input , scope="scope" , reuse=False):
-    return batch_norm(input , epsilon=1e-5, decay=0.9 , scale=True, scope=scope , reuse=reuse, fused=True, updates_collections=None)
+    return tf.keras.layers.BatchNormalization(input , epsilon=1e-5, decay=0.9 , scale=True, scope=scope , reuse=reuse, fused=True, updates_collections=None)
 
 def Residual(x, output_dims=256, kernel=3, strides=1, residual_name='resi'):
 
