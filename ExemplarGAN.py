@@ -77,8 +77,10 @@ class ExemplarGAN(object):
         print("e_vars", len(self.g_vars))
 
         self.saver = tf.compat.v1.train.Saver()
+        print("log_vars", self.log_vars)
         for k, v in self.log_vars:
-            tf.summary.scalar(k, v)
+            print(k, v)
+            tf.compat.v1.summary.scalar(k, v)
 
     def build_test_model_GAN(self):
 
@@ -88,7 +90,7 @@ class ExemplarGAN(object):
         self.local_fake_img = self.x_tilde * self.img_mask
         self.t_vars = tf.compat.v1.trainable_variables()
         self.g_vars = [var for var in self.t_vars if 'encode_decode' in var.name]
-        self.saver = tf.train.Saver()
+        self.saver = tf.compat.v1.train.Saver()
 
     def loss_dis(self, d_real_logits, d_fake_logits):
 
@@ -107,7 +109,7 @@ class ExemplarGAN(object):
         config = tf.compat.v1.ConfigProto()
         config.gpu_options.allow_growth = True
 
-        with tf.Session(config=config) as sess:
+        with tf.compat.v1.Session(config=config) as sess:
 
             sess.run(init)
             load_step = test_step
@@ -195,8 +197,9 @@ class ExemplarGAN(object):
                 self.saver.restore(sess, os.path.join(self.model_path, 'model_{:06d}.ckpt'.format(test_step)))
 
             while step <= self.max_iters:
+                print("step", step)
 
-                if step > 20000 and lr_decay > 0.1:
+                if step > 20 and lr_decay > 0.1: # orignally 20000
                     lr_decay = (self.max_iters - step) / float(self.max_iters - 10000)
 
                 for i in range(self.n_critic):
@@ -219,7 +222,7 @@ class ExemplarGAN(object):
                 summary_str = sess.run(summary_op, feed_dict=f_d)
                 summary_writer.add_summary(summary_str, step)
 
-                if step % 50 == 0:
+                if step % 5 == 0: # originally 5
                     d_loss,  g_loss = sess.run([self.D_loss, self.G_loss],
                         feed_dict=f_d)
                     print("step %d d_loss = %.4f, g_loss=%.4f" % (step, d_loss, g_loss))
