@@ -199,7 +199,7 @@ class ExemplarGAN(object):
             while step <= self.max_iters:
                 print("step", step)
 
-                if step > 20 and lr_decay > 0.1: # orignally 20000
+                if step > 20000 and lr_decay > 0.1:
                     lr_decay = (self.max_iters - step) / float(self.max_iters - 10000)
 
                 for i in range(self.n_critic):
@@ -222,7 +222,7 @@ class ExemplarGAN(object):
                 summary_str = sess.run(summary_op, feed_dict=f_d)
                 summary_writer.add_summary(summary_str, step)
 
-                if step % 5 == 0: # originally 5
+                if step % 50 == 0: 
                     d_loss,  g_loss = sess.run([self.D_loss, self.G_loss],
                         feed_dict=f_d)
                     print("step %d d_loss = %.4f, g_loss=%.4f" % (step, d_loss, g_loss))
